@@ -51,6 +51,16 @@ public class Main {
                         store.put(key, value);
                         out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
                 }
+                else if (name.equalsIgnoreCase("GET")) {
+                    String value = store.get(command.get(1));
+                    if (value == null) {
+                        out.write("$-1\r\n".getBytes(StandardCharsets.UTF_8));
+                    } else {
+                        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+                        out.write(("$" + bytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+                        out.write(bytes);
+                        out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+                    }
             }
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
