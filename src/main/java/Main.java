@@ -12,7 +12,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Main {
-    private record Entry(String value, long expiresAt){}
+    private record Entry(String value, long expiresAt) {}
+
     private static final Map<String, Entry> store = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
@@ -63,6 +64,7 @@ public class Main {
                         out.write(bytes);
                         out.write("\r\n".getBytes(StandardCharsets.UTF_8));
                     }
+                }
             }
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
