@@ -8,8 +8,12 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 public class Main {
+    private static final Map<String, String> store = new HashMap<>();
+
     public static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
         int port = 6379;
@@ -30,6 +34,7 @@ public class Main {
             BufferedInputStream in = new BufferedInputStream(clientSocket.getInputStream());
             OutputStream out = clientSocket.getOutputStream();
             List<String> command;
+
             while ((command = readCommand(in)) != null) {
                 String name = command.get(0);
                 if (name.equalsIgnoreCase("PING")) {
@@ -39,6 +44,12 @@ public class Main {
                     out.write(("$" + arg.length + "\r\n").getBytes(StandardCharsets.UTF_8));
                     out.write(arg);
                     out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+                }
+                    else if (name.equalsIgnoreCase("SET")){
+                        String key = command.get(1);
+                        String value = command.get(2);
+                        store.put(key, value);
+                        out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
                 }
             }
         } catch (IOException e) {
