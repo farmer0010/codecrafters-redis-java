@@ -12,7 +12,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Main {
-    private static final Map<String, String> store = new ConcurrentHashMap<>();
+    private record Entry(String value, long expiresAt){}
+    private static final Map<String, Entry> store = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
@@ -49,20 +50,19 @@ public class Main {
                 } else if (name.equalsIgnoreCase("SET")) {
                     String key = command.get(1);
                     String value = command.get(2);
-                    store.put(key, value);
+                    store.put(key, new Entry(value, Long.MAX_VALUE));
                     out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
                 } else if (name.equalsIgnoreCase("GET")) {
-                    String value = store.get(command.get(1));
+                    Entry entry = store.get(command.get(1));
 
-                    if (value == null) {
+                    if (entry == null || System.currentTimeMillis() >= entry.expiresAt()) {
                         out.write("$-1\r\n".getBytes(StandardCharsets.UTF_8));
                     } else {
-                        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+                        byte[] bytes = entry.value().getBytes(StandardCharsets.UTF_8);
                         out.write(("$" + bytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
                         out.write(bytes);
                         out.write("\r\n".getBytes(StandardCharsets.UTF_8));
                     }
-                }
             }
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
