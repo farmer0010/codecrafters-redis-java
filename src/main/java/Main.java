@@ -51,7 +51,14 @@ public class Main {
                 } else if (name.equalsIgnoreCase("SET")) {
                     String key = command.get(1);
                     String value = command.get(2);
-                    store.put(key, new Entry(value, Long.MAX_VALUE));
+                    long expiresAt = Long.MAX_VALUE;
+
+                    if (command.size() >= 5 && command.get(3).equalsIgnoreCase("PX")) {
+                        long px = Long.parseLong(command.get(4));
+                        expiresAt = System.currentTimeMillis() + px;
+                    }
+
+                    store.put(key, new Entry(value, expiresAt));
                     out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
                 } else if (name.equalsIgnoreCase("GET")) {
                     Entry entry = store.get(command.get(1));
