@@ -91,7 +91,7 @@ public class Main {
                     else{
                         list = (List<String>) entry.value();
                     }
-                    list.add(command.get(2));
+                    list.addAll(command.subList(2, command.size()));
                     out.write((":" + list.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
                 }
             }
