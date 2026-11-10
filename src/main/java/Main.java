@@ -94,6 +94,37 @@ public class Main {
                     list.addAll(command.subList(2, command.size()));
                     out.write((":" + list.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
                 }
+                else if (name.equalsIgnoreCase("LRANGE")){
+                    String key = command.get(1);
+                    int start = Integer.parseInt(command.get(2));
+                    int stop = Integer.parseInt(command.get(3));
+                    Entry entry = store.get(key);
+
+                    if(entry == null){
+                        out.write("*0\r\n".getBytes(StandardCharsets.UTF_8));
+                    }
+                    else{
+                        List<String> list = (List<String>) entry.value();
+                        int size = list.size();
+                        int to = Math.min(stop + 1, size);
+
+                        if(start >= to){
+                            out.write("*0\r\n".getBytes(StandardCharsets.UTF_8));
+                        }
+                        else{
+                            List<String> sub = list.subList(start, to);
+
+                            out.write(("*" + sub.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
+
+                            for(String element : sub){
+                                byte[] arg = element.getBytes(StandardCharsets.UTF_8);
+                                out.write(("$" + arg.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+                                out.write(arg);
+                                out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+                            }
+                        }
+                    }
+                }
             }
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
