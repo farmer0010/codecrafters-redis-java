@@ -81,9 +81,17 @@ public class Main {
                     }
                 } else if (name.equalsIgnoreCase("RPUSH")) {
                     String key = command.get(1);
-                    List<String> list = new ArrayList<>();
+                    Entry entry = store.get(key);
+                    List<String> list;
+
+                    if (entry == null) {
+                        list = new ArrayList<>();
+                        store.put(key, new Entry(list, Long.MAX_VALUE));
+                    }
+                    else{
+                        list = (List<String>) entry.value();
+                    }
                     list.add(command.get(2));
-                    store.put(key, new Entry(list, Long.MAX_VALUE));
                     out.write((":" + list.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
                 }
             }
