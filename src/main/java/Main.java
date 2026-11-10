@@ -106,6 +106,10 @@ public class Main {
                     else{
                         List<String> list = (List<String>) entry.value();
                         int size = list.size();
+                        if(start < 0) start = size - Math.abs(start);
+                        if(stop < 0) stop = size - Math.abs(stop);
+
+                        start = Math.max(start, 0);
                         int to = Math.min(stop + 1, size);
 
                         if(start >= to){
