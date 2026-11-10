@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Main {
-    private record Entry(String value, long expiresAt) {}
+    private record Entry(Object value, long expiresAt) {}
 
     private static final Map<String, Entry> store = new ConcurrentHashMap<>();
 
@@ -61,16 +61,30 @@ public class Main {
                     store.put(key, new Entry(value, expiresAt));
                     out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
                 } else if (name.equalsIgnoreCase("GET")) {
-                    Entry entry = store.get(command.get(1));
+                    String key = command.get(1);
+                    Entry entry = store.get(key);
 
-                    if (entry == null || System.currentTimeMillis() >= entry.expiresAt()) {
+                    if (entry != null && System.currentTimeMillis() >= entry.expiresAt()) {
+                        store.remove(key, entry);
+                        entry = null;
+                    }
+
+                    if (entry == null) {
                         out.write("$-1\r\n".getBytes(StandardCharsets.UTF_8));
-                    } else {
-                        byte[] bytes = entry.value().getBytes(StandardCharsets.UTF_8);
+                    } else if (entry.value() instanceof String value) {
+                        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
                         out.write(("$" + bytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
                         out.write(bytes);
                         out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+                    } else {
+                        out.write("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n".getBytes(StandardCharsets.UTF_8));
                     }
+                } else if (name.equalsIgnoreCase("RPUSH")) {
+                    String key = command.get(1);
+                    List<String> list = new ArrayList<>();
+                    list.add(command.get(2));
+                    store.put(key, new Entry(list, Long.MAX_VALUE));
+                    out.write((":" + list.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
                 }
             }
         } catch (IOException e) {
