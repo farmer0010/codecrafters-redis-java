@@ -230,7 +230,7 @@ public class Main {
                         }
 
                         if(element == null){
-                            out.write("$-1\r\n".getBytes(StandardCharsets.UTF_8) );
+                            out.write("*-1\r\n".getBytes(StandardCharsets.UTF_8) );
                         }
                         else{
                             out.write(("*2\r\n").getBytes(StandardCharsets.UTF_8));
