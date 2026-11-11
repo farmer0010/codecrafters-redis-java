@@ -14,6 +14,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class Main {
     private record Entry(Object value, long expiresAt) {}
@@ -205,29 +206,45 @@ public class Main {
                         Queue<BlockingQueue<String>> line =
                                 waiters.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>());
 
+                        double seconds = Double.parseDouble(command.get(2));
+                        long timeoutMs = (long) (seconds * 1000);
+
                         BlockingQueue<String> tray = new LinkedBlockingQueue<>();
                         line.add(tray);
 
-                        String element;
+                        String element = null;
                         try{
-                            element = tray.take();
+                            if(timeoutMs == 0){
+                                element = tray.take();
+                            }
+                            else{
+                                element = tray.poll(timeoutMs, TimeUnit.MILLISECONDS);
+                                if(element == null && !line.remove(tray)){
+                                    element = tray.take();
+                                }
+                            }
                         }
                         catch (InterruptedException e){
                             Thread.currentThread().interrupt();
                             return;
                         }
 
-                        out.write(("*2\r\n").getBytes(StandardCharsets.UTF_8));
+                        if(element == null){
+                            out.write("$-1\r\n".getBytes(StandardCharsets.UTF_8) );
+                        }
+                        else{
+                            out.write(("*2\r\n").getBytes(StandardCharsets.UTF_8));
 
-                        byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
-                        out.write(("$" + keyBytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
-                        out.write(keyBytes);
-                        out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+                            byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+                            out.write(("$" + keyBytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+                            out.write(keyBytes);
+                            out.write("\r\n".getBytes(StandardCharsets.UTF_8));
 
-                        byte[] bytes = element.getBytes(StandardCharsets.UTF_8);
-                        out.write(("$" + bytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
-                        out.write(bytes);
-                        out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+                            byte[] bytes = element.getBytes(StandardCharsets.UTF_8);
+                            out.write(("$" + bytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+                            out.write(bytes);
+                            out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+                        }
                     }
                 }
 
