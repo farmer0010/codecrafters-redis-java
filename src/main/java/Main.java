@@ -124,7 +124,20 @@ public class Main {
                         out.write((":" + list.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
                     }
                 }
+                else if (name.equalsIgnoreCase("LPOP")) {
+                    String key = command.get(1);
+                    Entry entry = store.get(key);
+                    List<String> list;
 
+                    if(entry == null || list.size() == 0){
+                        out.write(":-1\r\n".getBytes(StandardCharsets.UTF_8) );
+                    }
+                    else{
+                        list = (List<String>) entry.value();
+                        int num = list.remove(0);
+                        out.write((":" + num + "\r\n").getBytes(StandardCharsets.UTF_8));
+                    }
+                }
                 else if (name.equalsIgnoreCase("LRANGE")){
                     String key = command.get(1);
                     int start = Integer.parseInt(command.get(2));
