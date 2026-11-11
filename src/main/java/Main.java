@@ -129,12 +129,16 @@ public class Main {
                     Entry entry = store.get(key);
                     List<String> list;
 
-                    if(entry == null || list.size() == 0){
-                        out.write(":-1\r\n".getBytes(StandardCharsets.UTF_8) );
+                    if(entry == null){
+                        out.write("$-1\r\n".getBytes(StandardCharsets.UTF_8) );
                     }
+                    if(list.size() == 0){
+                        out.write("$-1\r\n".getBytes(StandardCharsets.UTF_8) );
+                    }
+
                     else{
                         list = (List<String>) entry.value();
-                        int num = list.remove(0);
+                        String num = list.remove(0);
                         out.write((":" + num + "\r\n").getBytes(StandardCharsets.UTF_8));
                     }
                 }
