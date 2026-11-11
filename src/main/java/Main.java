@@ -132,14 +132,19 @@ public class Main {
                     if(entry == null){
                         out.write("$-1\r\n".getBytes(StandardCharsets.UTF_8) );
                     }
-                    if(list.size() == 0){
-                        out.write("$-1\r\n".getBytes(StandardCharsets.UTF_8) );
-                    }
-
                     else{
-                        list = (List<String>) entry.value();
-                        String num = list.remove(0);
-                        out.write((":" + num + "\r\n").getBytes(StandardCharsets.UTF_8));
+                        if(list.size() == 0){
+                            out.write("$-1\r\n".getBytes(StandardCharsets.UTF_8) );
+                        }
+                        else{
+                            list = (List<String>) entry.value();
+                            String num = list.remove(0);
+
+                            byte[] bytes = num.getBytes(StandardCharsets.UTF_8);
+                            out.write(("$" + bytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+                            out.write(bytes);
+                            out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+                        }
                     }
                 }
                 else if (name.equalsIgnoreCase("LRANGE")){
