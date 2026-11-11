@@ -153,7 +153,9 @@ public class Main {
                                 out.write(("*" + n + "\r\n").getBytes(StandardCharsets.UTF_8));
 
                                 for(int i = 0; i < n; i++){
-                                    byte[] bytes = num.getBytes(StandardCharsets.UTF_8);
+                                    String element = list.remove(i);
+
+                                    byte[] bytes = element.getBytes(StandardCharsets.UTF_8);
                                     out.write(("$" + bytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
                                     out.write(bytes);
                                     out.write("\r\n".getBytes(StandardCharsets.UTF_8));
