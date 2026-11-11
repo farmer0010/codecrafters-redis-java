@@ -9,10 +9,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue
 import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class Main {
     private record Entry(Object value, long expiresAt) {}
@@ -180,11 +181,12 @@ public class Main {
                 else  if(name.equalsIgnoreCase("BLPOP")) {
                     String key = command.get(1);
                     Entry entry = store.get(key);
-                    List<String> list;
+                    List<String> list = null;
 
-                    if(entry == null){
+                    if(entry != null){
                         list = (List<String>) entry.value();
                     }
+
                     if(list != null && list.size() > 0){
                         String element = list.remove(0);
                         out.write(("*2\r\n").getBytes(StandardCharsets.UTF_8));
