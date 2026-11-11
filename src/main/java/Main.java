@@ -111,6 +111,20 @@ public class Main {
                     }
                     out.write((":" + list.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
                 }
+                else if (name.equalsIgnoreCase("LLEN")) {
+                    String key = command.get(1);
+                    Entry entry = store.get(key);
+                    List<String> list;
+
+                    if(entry == null){
+                        out.write(":0\r\n".getBytes(StandardCharsets.UTF_8) );
+                    }
+                    else{
+                        list = (List<String>) entry.value();
+                        out.write((":" + list.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
+                    }
+                }
+
                 else if (name.equalsIgnoreCase("LRANGE")){
                     String key = command.get(1);
                     int start = Integer.parseInt(command.get(2));
