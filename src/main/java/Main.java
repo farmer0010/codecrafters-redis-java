@@ -94,6 +94,23 @@ public class Main {
                     list.addAll(command.subList(2, command.size()));
                     out.write((":" + list.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
                 }
+                else if (name.equalsIgnoreCase("LPUSH")) {
+                    String key = command.get(1);
+                    Entry entry = store.get(key);
+                    List<String> list;
+
+                    if(entry == null){
+                        list = new ArrayList<>();
+                        store.put(key, new Entry(list, Long.MAX_VALUE));
+                    }
+                    else{
+                        list = (List<String>) entry.value();
+                    }
+                    for(int i = 2; i < command.size(); i++){
+                        list.add(0, command.get(i));
+                    }
+                    out.write((":" + list.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
+                }
                 else if (name.equalsIgnoreCase("LRANGE")){
                     String key = command.get(1);
                     int start = Integer.parseInt(command.get(2));
