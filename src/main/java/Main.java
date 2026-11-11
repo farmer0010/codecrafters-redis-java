@@ -133,11 +133,12 @@ public class Main {
                         out.write("$-1\r\n".getBytes(StandardCharsets.UTF_8) );
                     }
                     else{
+                        list = (List<String>) entry.value();
+
                         if(list.size() == 0){
                             out.write("$-1\r\n".getBytes(StandardCharsets.UTF_8) );
                         }
                         else{
-                            list = (List<String>) entry.value();
                             String num = list.remove(0);
 
                             byte[] bytes = num.getBytes(StandardCharsets.UTF_8);
