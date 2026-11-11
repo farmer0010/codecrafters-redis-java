@@ -10,11 +10,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.Queue;
 
 public class Main {
     private record Entry(Object value, long expiresAt) {}
 
     private static final Map<String, Entry> store = new ConcurrentHashMap<>();
+    private static final Map<String, Queue<BlockingQueue<String>>> waiters = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
@@ -93,6 +97,15 @@ public class Main {
                     }
                     list.addAll(command.subList(2, command.size()));
                     out.write((":" + list.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
+
+                    Queue<BlockingQueue<String>> line = waiters.get(key);
+                    if (line != null) {
+                        BlockingQueue<String> tray = line.poll();
+                        if (tray != null) {
+                            String element = list.remove(0);
+                            tray.offer(element);
+                        }
+                    }
                 }
                 else if (name.equalsIgnoreCase("LPUSH")) {
                     String key = command.get(1);
@@ -164,6 +177,58 @@ public class Main {
                         }
                     }
                 }
+                else  if(name.equalsIgnoreCase("BLPOP")) {
+                    String key = command.get(1);
+                    Entry entry = store.get(key);
+                    List<String> list;
+
+                    if(entry == null){
+                        list = (List<String>) entry.value();
+                    }
+                    if(list != null && list.size() > 0){
+                        String element = list.remove(0);
+                        out.write(("*2\r\n").getBytes(StandardCharsets.UTF_8));
+
+                        byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+                        out.write(("$" + keyBytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+                        out.write(keyBytes);
+                        out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+
+                        byte[] bytes = element.getBytes(StandardCharsets.UTF_8);
+                        out.write(("$" + bytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+                        out.write(bytes);
+                        out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+                    }
+                    else{
+                        Queue<BlockingQueue<String>> line =
+                                waiters.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>());
+
+                        BlockingQueue<String> tray = new LinkedBlockingQueue<>();
+                        line.add(tray);
+
+                        String element;
+                        try{
+                            element = tray.take();
+                        }
+                        catch (InterruptedException e){
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
+
+                        out.write(("*2\r\n").getBytes(StandardCharsets.UTF_8));
+
+                        byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+                        out.write(("$" + keyBytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+                        out.write(keyBytes);
+                        out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+
+                        byte[] bytes = element.getBytes(StandardCharsets.UTF_8);
+                        out.write(("$" + bytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+                        out.write(bytes);
+                        out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+                    }
+                }
+
                 else if (name.equalsIgnoreCase("LRANGE")){
                     String key = command.get(1);
                     int start = Integer.parseInt(command.get(2));
