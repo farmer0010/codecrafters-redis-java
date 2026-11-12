@@ -324,7 +324,7 @@ public class Main {
                     else if(entry.value() instanceof String){
                         out.write(("+string\r\n").getBytes(StandardCharsets.UTF_8));
                     }
-                    else if(entry.value() instanceof StreamEntry){
+                    else if(entry.value() instanceof RedisStream){
                         out.write(("+stream\r\n").getBytes(StandardCharsets.UTF_8));
                     }
                 }
