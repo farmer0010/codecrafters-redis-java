@@ -300,6 +300,31 @@ public class Main {
                         stream = (RedisStream) entry.value();
                     }
 
+                    String[] sp_id = id.split("-");
+                    long newMs = Long.parseLong(sp_id[0]);
+                    long newSeq = Long.parseLong(sp_id[1]);
+
+                    if(newMs == 0 && newSeq == 0){
+                        out.write("-ERR The ID specified in XADD must be greater than 0-0\r\n".getBytes(StandardCharsets.UTF_8));
+                        continue;
+                    }
+
+                    long lastMs = 0;
+                    long lastSeq = 0;
+
+                    if(stream.entries.size() > 0){
+                        String lastId = stream.entries.get(stream.entries.size() - 1).id;
+                        String[] sp_last = lastId.split("-");
+
+                        lastMs = Long.parseLong(sp_last[0]);
+                        lastSeq = Long.parseLong(sp_last[1]);
+                    }
+
+                    if(newMs < lastMs || (newMs == lastMs && newSeq <= lastSeq)){
+                        out.write("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n".getBytes(StandardCharsets.UTF_8));
+                        continue;
+                    }
+
                     Map<String, String> fields = new LinkedHashMap<>();
 
                     for(int i = 3; i < command.size(); i += 2){
