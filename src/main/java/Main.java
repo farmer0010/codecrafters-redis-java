@@ -14,10 +14,13 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.LinkedHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class Main {
     private record Entry(Object value, long expiresAt) {}
+    private record StreamEntry(String id, Map<String, String> fields){}
+    private record RedisStream(List<StreamEntry> entries){}
 
     private static final Map<String, Entry> store = new ConcurrentHashMap<>();
     private static final Map<String, Queue<BlockingQueue<String>>> waiters = new ConcurrentHashMap<>();
@@ -283,6 +286,34 @@ public class Main {
                         }
                     }
                 }
+                else if(name.equalsIgnoreCase("XADD")){
+                    String key = command.get(1);
+                    String id = command.get(2);
+                    Entry entry = store.get(key);
+                    RedisStream stream;
+
+                    if(entry == null){
+                        stream = new RedisStream(new ArrayList<>());
+                        store.put(key, new Entry(stream, Long.MAX_VALUE));
+                    }
+                    else{
+                        stream = (RedisStream) entry.value();
+                    }
+
+                    Map<String, String> fields = new LinkedHashMap<>();
+
+                    for(int i = 3; i < command.size(); i += 2){
+                        fields.put(command.get(i), command.get(i + 1));
+                    }
+
+                    stream.entries().add(new StreamEntry(id, fields));
+
+                    byte[] arg = id.getBytes(StandardCharsets.UTF_8);
+                    out.write(("$" + arg.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+                    out.write(arg);
+                    out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+                }
+
                 else if(name.equalsIgnoreCase("TYPE")){
                     String key = command.get(1);
                     Entry entry = store.get(key);
@@ -292,6 +323,9 @@ public class Main {
                     }
                     else if(entry.value() instanceof String){
                         out.write(("+string\r\n").getBytes(StandardCharsets.UTF_8));
+                    }
+                    else if(entry.value() instanceof StreamEntry){
+                        out.write(("+stream\r\n").getBytes(StandardCharsets.UTF_8));
                     }
                 }
             }
