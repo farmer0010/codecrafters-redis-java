@@ -311,7 +311,15 @@ public class Main {
                         lastSeq = Long.parseLong(sp_last[1]);
                     }
 
-                    String[] sp_id = id.split("-");
+                    String[] sp_id;
+
+                    if(id.equals("*")){
+                        sp_id = new String[]{String.valueOf(System.currentTimeMillis()), "*"};
+                    }
+                    else{
+                        sp_id = id.split("-");
+                    }
+
                     long newMs = Long.parseLong(sp_id[0]);
                     long newSeq;
 
