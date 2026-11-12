@@ -300,15 +300,6 @@ public class Main {
                         stream = (RedisStream) entry.value();
                     }
 
-                    String[] sp_id = id.split("-");
-                    long newMs = Long.parseLong(sp_id[0]);
-                    long newSeq = Long.parseLong(sp_id[1]);
-
-                    if(newMs == 0 && newSeq == 0){
-                        out.write("-ERR The ID specified in XADD must be greater than 0-0\r\n".getBytes(StandardCharsets.UTF_8));
-                        continue;
-                    }
-
                     long lastMs = 0;
                     long lastSeq = 0;
 
@@ -318,6 +309,28 @@ public class Main {
 
                         lastMs = Long.parseLong(sp_last[0]);
                         lastSeq = Long.parseLong(sp_last[1]);
+                    }
+
+                    String[] sp_id = id.split("-");
+                    long newMs = Long.parseLong(sp_id[0]);
+                    long newSeq;
+
+                    if(sp_id[1].equals("*")){
+                        if(newMs == lastMs){
+                            newSeq = lastSeq + 1;
+                        }
+                        else{
+                            newSeq = 0;
+                        }
+                        id = newMs + "-" + newSeq;
+                    }
+                    else{
+                        newSeq = Long.parseLong(sp_id[1]);
+                    }
+
+                    if(newMs == 0 && newSeq == 0){
+                        out.write("-ERR The ID specified in XADD must be greater than 0-0\r\n".getBytes(StandardCharsets.UTF_8));
+                        continue;
                     }
 
                     if(newMs < lastMs || (newMs == lastMs && newSeq <= lastSeq)){
