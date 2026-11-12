@@ -288,10 +288,10 @@ public class Main {
                     Entry entry = store.get(key);
 
                     if(entry == null){
-                        out.write("none\r\n".getBytes(StandardCharsets.UTF_8));
+                        out.write("+none\r\n".getBytes(StandardCharsets.UTF_8));
                     }
                     else if(entry.value() instanceof String){
-                        out.write(("string\r\n").getBytes(StandardCharsets.UTF_8));
+                        out.write(("+string\r\n").getBytes(StandardCharsets.UTF_8));
                     }
                 }
             }
