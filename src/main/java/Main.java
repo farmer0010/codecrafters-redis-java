@@ -283,6 +283,17 @@ public class Main {
                         }
                     }
                 }
+                else if(name.equalsIgnoreCase("TYPE")){
+                    String key = command.get(1);
+                    Entry entry = store.get(key);
+
+                    if(entry == null){
+                        out.write("none\r\n".getBytes(StandardCharsets.UTF_8));
+                    }
+                    else if(entry.value() instanceof String){
+                        out.write(("string\r\n").getBytes(StandardCharsets.UTF_8));
+                    }
+                }
             }
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
@@ -327,7 +338,6 @@ public class Main {
             in.readNBytes(2);
             args.add(new String(data, StandardCharsets.UTF_8));
         }
-
         return args;
     }
 }
