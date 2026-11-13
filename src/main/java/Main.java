@@ -359,6 +359,77 @@ public class Main {
                     out.write(arg);
                     out.write("\r\n".getBytes(StandardCharsets.UTF_8));
                 }
+                else if(name.equalsIgnoreCase("XRANGE")){
+                    String key = command.get(1);
+                    String startStr = command.get(2);
+                    String endStr = command.get(3);
+                    Entry entry = store.get(key);
+
+                    if(entry == null){
+                        out.write("*0\r\n".getBytes(StandardCharsets.UTF_8));
+                        continue;
+                    }
+
+                    RedisStream stream; = (RedisStream) entry.value();
+
+                    String[] sp_start = startStr.split("-");
+                    long startMs = Long.parseLong(sp_start[0]);
+                    long startSeq = 0;
+
+                    if(sp_start.length > 1){
+                        startMs = Long.parseLong(sp_start[1]);
+                    }
+
+                    String[] sp_end = endStr.split("-");
+                    long endMs = Long.parseLong(sp_end[0]);
+                    long endSeq = Long.MAX_VALUE;
+
+                    if(sp_end.length > 1){
+                        endMs = Long.parseLong(sp_end[1]);
+                    }
+
+                    List<StreamEntry> result = new ArrayList<>();
+
+                    for(StreamEntry e : stream.entries){
+                        String[] sp = e.id.split("-");
+                        long ms = Long.parseLong(sp[0]);
+                        long seq = Long.parseLong(sp[1]);
+
+                        boolean afterStart = ms > startMs || (ms == startMs && seq >= startSeq);
+                        boolean afterEnd = ms < endMs || (ms == endMs && seq <= endSeq);
+
+                        if(afterStart && afterEnd){
+                            result.add(e);
+                        }
+                    }
+
+                    out.write(("*" + result.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
+
+                    for(StreamEntry e : result){
+                        out.write("*2\r\n".getBytes(StandardCharsets.UTF_8));
+
+                        byte[] idBytes = e.id().getBytes(StandardCharsets.UTF_8);
+                        out.write(("$" + idBytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+                        out.write(idBytes);
+                        out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+
+                        out.write(("*" + (e.fields().size() * 2) + "\r\n").getBytes(StandardCharsets.UTF_8));
+
+                        for(Map.Entry<String, String> f : e.fields().entrySet()){
+                            byte[] fieldKey = f.getKey().getBytes(StandardCharsets.UTF_8);
+                            out.write(("$" + fieldKey.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+                            out.write(fieldKey);
+                            out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+
+                            byte[] fieldValue = f.getValue().getBytes(StandardCharsets.UTF_8);
+                            out.write(("$" + fieldValue.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+                            out.write(fieldValue);
+                            out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+
+                        }
+                    }
+
+                }
 
                 else if(name.equalsIgnoreCase("TYPE")){
                     String key = command.get(1);
