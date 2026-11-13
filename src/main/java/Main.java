@@ -388,13 +388,22 @@ public class Main {
                         }
                     }
 
-                    String[] sp_end = endStr.split("-");
-                    long endMs = Long.parseLong(sp_end[0]);
-                    long endSeq = Long.MAX_VALUE;
+                    long endMs;
+                    long endSeq;
 
-                    if(sp_end.length > 1){
-                        endSeq = Long.parseLong(sp_end[1]);
-                    }
+                   if(endStr.equals("+")){
+                       endMs = Long.MAX_VALUE;
+                       endSeq = Long.MAX_VALUE;
+                   }
+                   else{
+                       String[] sp_end = endStr.split("-");
+                       endMs = Long.parseLong(sp_end[0]);
+                       endSeq = Long.MAX_VALUE;
+
+                       if(sp_end.length > 1){
+                           endSeq = Long.parseLong(sp_end[1]);
+                       }
+                   }
 
                     List<StreamEntry> result = new ArrayList<>();
 
