@@ -372,12 +372,18 @@ public class Main {
 
                     RedisStream stream = (RedisStream) entry.value();
 
-                    String[] sp_start = startStr.split("-");
-                    long startMs = Long.parseLong(sp_start[0]);
-                    long startSeq = 0;
+                    if(startStr.equals("-")){
+                        long startMs = 0;
+                        long startSeq = 0;
+                    }
+                    else{
+                        String[] sp_start = startStr.split("-");
+                        long startMs = Long.parseLong(sp_start[0]);
+                        long startSeq = 0;
 
-                    if(sp_start.length > 1){
-                        startSeq = Long.parseLong(sp_start[1]);
+                        if(sp_start.length > 1){
+                            startSeq = Long.parseLong(sp_start[1]);
+                        }
                     }
 
                     String[] sp_end = endStr.split("-");
