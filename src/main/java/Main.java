@@ -370,14 +370,14 @@ public class Main {
                         continue;
                     }
 
-                    RedisStream stream; = (RedisStream) entry.value();
+                    RedisStream stream = (RedisStream) entry.value();
 
                     String[] sp_start = startStr.split("-");
                     long startMs = Long.parseLong(sp_start[0]);
                     long startSeq = 0;
 
                     if(sp_start.length > 1){
-                        startMs = Long.parseLong(sp_start[1]);
+                        startSeq = Long.parseLong(sp_start[1]);
                     }
 
                     String[] sp_end = endStr.split("-");
@@ -385,7 +385,7 @@ public class Main {
                     long endSeq = Long.MAX_VALUE;
 
                     if(sp_end.length > 1){
-                        endMs = Long.parseLong(sp_end[1]);
+                        endSeq = Long.parseLong(sp_end[1]);
                     }
 
                     List<StreamEntry> result = new ArrayList<>();
