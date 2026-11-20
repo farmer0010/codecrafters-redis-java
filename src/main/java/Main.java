@@ -474,6 +474,26 @@ public class Main {
                         blockMs = Long.parseLong(command.get(2));
                     }
 
+                    for(int i = 0; i < n; i++){
+                        int idIdx = streamsIdx + 1 + n + i;
+
+                        if(command.get(idIdx).equalsIgnoreCase("$")){
+                            String key = command.get(streamsIdx + 1 + i);
+                            Entry entry = store.get(key);
+                            String lastId = "0-0";
+
+                            if(entry != null){
+                                RedisStream stream = (RedisStream) entry.value();
+
+                                if(!stream.entries().isEmpty()){
+                                    lastId = stream.entries().get(stream.entries().size() - 1).id();
+                                }
+                            }
+
+                            command.set(idIdx, lastId);
+                        }
+                    }
+
                     Map<String, List<StreamEntry>> found = collect(command, streamsIdx, n);
 
                     if(!hasData(found) && blockMs >= 0){
@@ -482,20 +502,22 @@ public class Main {
                         for(String key : found.keySet()){
                             streamWaiters.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>()).add(tray);
                         }
-                        System.out.println("XREAD: tray registered");
 
-                        try{
-                            if(blockMs == 0){
-                                tray.take();
+                        found = collect(command, streamsIdx, n);
+
+                        if(!hasData(found)){
+                            try{
+                                if(blockMs == 0){
+                                    tray.take();
+                                }
+                                else{
+                                    tray.poll(blockMs, TimeUnit.MILLISECONDS);
+                                }
                             }
-                            else{
-                                tray.poll(blockMs, TimeUnit.MILLISECONDS);
+                            catch(InterruptedException ie){
+                                Thread.currentThread().interrupt();
+                                return;
                             }
-                            System.out.println("XREAD: woke up");
-                        }
-                        catch(InterruptedException ie){
-                            Thread.currentThread().interrupt();
-                            return;
                         }
 
                         for(String key : found.keySet()){
