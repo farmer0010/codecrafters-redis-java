@@ -475,7 +475,7 @@ public class Main {
 
                     Map<String, List<StreamEntry>> found = collect(command, streamsIdx, n);
 
-                    if(!hasData(found) && blockMs > 0){
+                    if(!hasData(found) && blockMs >= 0){
                         BlockingQueue<String> tray = new LinkedBlockingQueue<>();
 
                         for(String key : found.keySet()){
@@ -483,7 +483,12 @@ public class Main {
                         }
 
                         try{
-                            tray.poll(blockMs, TimeUnit.MILLISECONDS);
+                            if(blockMs == 0){
+                                tray.take();
+                            }
+                            else{
+                                tray.poll(blockMs, TimeUnit.MILLISECONDS);
+                            }
                         }
                         catch(InterruptedException ie){
                             Thread.currentThread().interrupt();
