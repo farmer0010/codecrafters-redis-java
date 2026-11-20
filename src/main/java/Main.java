@@ -356,6 +356,7 @@ public class Main {
                     stream.entries().add(new StreamEntry(id, fields));
 
                     Queue<BlockingQueue<String>> line = streamWaiters.get(key);
+                    System.out.println("XADD: line = " + line);
                     if(line != null){
                         BlockingQueue<String> tray;
                         while((tray = line.poll()) != null){
@@ -481,6 +482,7 @@ public class Main {
                         for(String key : found.keySet()){
                             streamWaiters.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>()).add(tray);
                         }
+                        System.out.println("XREAD: tray registered");
 
                         try{
                             if(blockMs == 0){
@@ -489,6 +491,7 @@ public class Main {
                             else{
                                 tray.poll(blockMs, TimeUnit.MILLISECONDS);
                             }
+                            System.out.println("XREAD: woke up");
                         }
                         catch(InterruptedException ie){
                             Thread.currentThread().interrupt();
