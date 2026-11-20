@@ -24,6 +24,7 @@ public class Main {
 
     private static final Map<String, Entry> store = new ConcurrentHashMap<>();
     private static final Map<String, Queue<BlockingQueue<String>>> waiters = new ConcurrentHashMap<>();
+    private static final Map<String, Queue<BlockingQueue<String>>> streamWaiters = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
@@ -354,6 +355,14 @@ public class Main {
 
                     stream.entries().add(new StreamEntry(id, fields));
 
+                    Queue<BlockingQueue<String>> line = streamWaiters.get(key);
+                    if(line != null){
+                        BlockingQueue<String> tray;
+                        while((tray = line.poll()) != null){
+                            tray.offer(key);
+                        }
+                    }
+
                     byte[] arg = id.getBytes(StandardCharsets.UTF_8);
                     out.write(("$" + arg.length + "\r\n").getBytes(StandardCharsets.UTF_8));
                     out.write(arg);
@@ -448,51 +457,67 @@ public class Main {
 
                 }
                 else if(name.equalsIgnoreCase("XREAD")){
-                    int n = (command.size() - 2) / 2;
+                    int streamsIdx = -1;
 
-                    out.write(("*" + n + "\r\n").getBytes(StandardCharsets.UTF_8));
+                    for(int i = 0; i < command.size(); i++){
+                        if(command.get(i).equalsIgnoreCase("streams")){
+                            streamsIdx = i;
+                            break;
+                        }
+                    }
 
-                    for(int i = 0; i < n; i++){
-                        String key = command.get(2 + i);
-                        String idStr = command.get(2 + n + i);
-                        Entry entry = store.get(key);
+                    int n = (command.size() - (streamsIdx + 1)) / 2;
 
-                        String[] sp_id = idStr.split("-");
-                        long idMs = Long.parseLong(sp_id[0]);
-                        long idSeq = 0;
+                    long blockMs = -1;
+                    if(command.get(1).equalsIgnoreCase("block")){
+                        blockMs = Long.parseLong(command.get(2));
+                    }
 
-                        if(sp_id.length > 1){
-                            idSeq = Long.parseLong(sp_id[1]);
+                    Map<String, List<StreamEntry>> found = collect(command, streamsIdx, n);
+
+                    if(!hasData(found) && blockMs > 0){
+                        BlockingQueue<String> tray = new LinkedBlockingQueue<>();
+
+                        for(String key : found.keySet()){
+                            streamWaiters.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>()).add(tray);
                         }
 
-                        List<StreamEntry> result = new ArrayList<>();
+                        try{
+                            tray.poll(blockMs, TimeUnit.MILLISECONDS);
+                        }
+                        catch(InterruptedException ie){
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
 
-                        if(entry != null){
-                            RedisStream stream = (RedisStream) entry.value();
-
-                            for(StreamEntry e : stream.entries()){
-                                String[] sp = e.id().split("-");
-                                long ms = Long.parseLong(sp[0]);
-                                long seq = Long.parseLong(sp[1]);
-
-                                boolean after = ms > idMs || (ms == idMs && seq > idSeq);
-
-                                if(after){
-                                    result.add(e);
-                                }
+                        for(String key : found.keySet()){
+                            Queue<BlockingQueue<String>> line = streamWaiters.get(key);
+                            if(line != null){
+                                line.remove(tray);
                             }
                         }
 
+                        found = collect(command, streamsIdx, n);
+                    }
+
+                    if(!hasData(found)){
+                        out.write("*-1\r\n".getBytes(StandardCharsets.UTF_8));
+                        continue;
+                    }
+
+                    out.write(("*" + found.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
+
+                    for(Map.Entry<String, List<StreamEntry>> s : found.entrySet()){
                         out.write("*2\r\n".getBytes(StandardCharsets.UTF_8));
 
-                        byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+                        byte[] keyBytes = s.getKey().getBytes(StandardCharsets.UTF_8);
                         out.write(("$" + keyBytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
                         out.write(keyBytes);
                         out.write("\r\n".getBytes(StandardCharsets.UTF_8));
 
-                        out.write(("*" + result.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
+                        out.write(("*" + s.getValue().size() + "\r\n").getBytes(StandardCharsets.UTF_8));
 
-                        for(StreamEntry e : result){
+                        for(StreamEntry e : s.getValue()){
                             out.write("*2\r\n".getBytes(StandardCharsets.UTF_8));
 
                             byte[] idBytes = e.id().getBytes(StandardCharsets.UTF_8);
@@ -535,6 +560,55 @@ public class Main {
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
         }
+    }
+
+    private static Map<String, List<StreamEntry>> collect(List<String> command, int streamsIdx, int n){
+        Map<String, List<StreamEntry>> found = new LinkedHashMap<>();
+
+        for(int i = 0; i < n; i++){
+            String key = command.get(streamsIdx + 1 + i);
+            String idStr = command.get(streamsIdx + 1 + n + i);
+            Entry entry = store.get(key);
+
+            String[] sp_id = idStr.split("-");
+            long idMs = Long.parseLong(sp_id[0]);
+            long idSeq = 0;
+
+            if(sp_id.length > 1){
+                idSeq = Long.parseLong(sp_id[1]);
+            }
+
+            List<StreamEntry> result = new ArrayList<>();
+
+            if(entry != null){
+                RedisStream stream = (RedisStream) entry.value();
+
+                for(StreamEntry e : stream.entries()){
+                    String[] sp = e.id().split("-");
+                    long ms = Long.parseLong(sp[0]);
+                    long seq = Long.parseLong(sp[1]);
+
+                    boolean after = ms > idMs || (ms == idMs && seq > idSeq);
+
+                    if(after){
+                        result.add(e);
+                    }
+                }
+            }
+
+            found.put(key, result);
+        }
+
+        return found;
+    }
+
+    private static boolean hasData(Map<String, List<StreamEntry>> found){
+        for(List<StreamEntry> result : found.values()){
+            if(!result.isEmpty()){
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String readLine(InputStream in) throws IOException {
