@@ -79,6 +79,17 @@ public class Main {
                     continue;
                 }
 
+                if(name.equalsIgnoreCase("DISCARD")){
+                    if(!inMulti){
+                        out.write("-ERR DISCARD without MULTI\r\n".getBytes(StandardCharsets.UTF_8));
+                        continue;
+                    }
+                    queued.clear();
+                    inMulti = false;
+                    out.write("OK\r\n".getBytes(StandardCharsets.UTF_8));
+                    continue;
+                }
+
                 if(inMulti){
                     queued.add(command);
                     out.write("+QUEUED\r\n".getBytes(StandardCharsets.UTF_8));
