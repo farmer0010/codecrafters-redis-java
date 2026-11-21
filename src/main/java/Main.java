@@ -605,6 +605,12 @@ public class Main {
                     inMulti = true;
                     out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
                 }
+                else if(name.equalsIgnoreCase("EXEC")){
+                    if(!isMulti){
+                        out.write("-ERR EXEC without MULTI\\r\\n".getBytes(StandardCharsets.UTF_8));
+                        continue;
+                    }
+                }
 
                 else if(name.equalsIgnoreCase("TYPE")){
                     String key = command.get(1);
