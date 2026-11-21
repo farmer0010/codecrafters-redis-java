@@ -584,7 +584,14 @@ public class Main {
                     }
                     else {
                         String value = (String)entry.value();
-                        n = Long.parseLong(value);
+
+                        try{
+                            n = Long.parseLong(value);
+                        }
+                        catch(NumberFormatException e){
+                            out.write("-ERR value is not an integer or out of range\r\n".getBytes(StandardCharsets.UTF_8));
+                            continue;
+                        }
                         expiresAt = entry.expiresAt();
                     }
                     n = n + 1;
