@@ -607,7 +607,7 @@ public class Main {
                 }
                 else if(name.equalsIgnoreCase("EXEC")){
                     if(!inMulti){
-                        out.write("-ERR EXEC without MULTI\\r\\n".getBytes(StandardCharsets.UTF_8));
+                        out.write("-ERR EXEC without MULTI\r\n".getBytes(StandardCharsets.UTF_8));
                         continue;
                     }
                 }
