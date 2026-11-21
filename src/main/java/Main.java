@@ -47,6 +47,7 @@ public class Main {
             BufferedInputStream in = new BufferedInputStream(clientSocket.getInputStream());
             OutputStream out = clientSocket.getOutputStream();
             List<String> command;
+            boolean inMulti = false;
 
             while ((command = readCommand(in)) != null) {
                 String name = command.get(0);
@@ -598,6 +599,11 @@ public class Main {
 
                     store.put(key, new Entry(String.valueOf(n), expiresAt));
                     out.write((":" + n + "\r\n").getBytes(StandardCharsets.UTF_8));
+                }
+
+                else if(name.equalsIgnoreCase("MULTI")){
+                    inMulti = true;
+                    out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
                 }
 
                 else if(name.equalsIgnoreCase("TYPE")){
