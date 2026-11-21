@@ -48,9 +48,16 @@ public class Main {
             OutputStream out = clientSocket.getOutputStream();
             List<String> command;
             boolean inMulti = false;
+            List<List<String>> queued = new ArrayList<>();
 
             while ((command = readCommand(in)) != null) {
                 String name = command.get(0);
+
+                if(inMulti && !name.equalsIgnoreCase("EXEC")) {
+                    queued.add(command);
+                    out.write("+QUEUED\r\n".getBytes(StandardCharsets.UTF_8));
+                    continue;
+                }
 
                 if (name.equalsIgnoreCase("PING")) {
                     out.write("+PONG\r\n".getBytes(StandardCharsets.UTF_8));
