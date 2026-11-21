@@ -610,6 +610,8 @@ public class Main {
                         out.write("-ERR EXEC without MULTI\r\n".getBytes(StandardCharsets.UTF_8));
                         continue;
                     }
+                    inMulti = false;
+                    out.write("*0\r\n".getBytes(StandardCharsets.UTF_8));
                 }
 
                 else if(name.equalsIgnoreCase("TYPE")){
