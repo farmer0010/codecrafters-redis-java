@@ -356,7 +356,6 @@ public class Main {
                     stream.entries().add(new StreamEntry(id, fields));
 
                     Queue<BlockingQueue<String>> line = streamWaiters.get(key);
-                    System.out.println("XADD: line = " + line);
                     if(line != null){
                         BlockingQueue<String> tray;
                         while((tray = line.poll()) != null){
@@ -576,11 +575,21 @@ public class Main {
                     String key = command.get(1);
                     Entry entry = store.get(key);
 
-                    String value = (String)entry.value();
-                    long n =  Long.parseLong(value);
+                    long n;
+                    long expiresAt;
+
+                    if(entry == null){
+                        n = 0;
+                        expiresAt = Long.MAX_VALUE;
+                    }
+                    else {
+                        String value = (String)entry.value();
+                        n = Long.parseLong(value);
+                        expiresAt = entry.expiresAt();
+                    }
                     n = n + 1;
 
-                    store.put(key, new Entry(String.valueOf(n), entry.expiresAt()));
+                    store.put(key, new Entry(String.valueOf(n), expiresAt));
                     out.write((":" + n + "\r\n").getBytes(StandardCharsets.UTF_8));
                 }
 
