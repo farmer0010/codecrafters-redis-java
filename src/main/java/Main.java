@@ -86,7 +86,7 @@ public class Main {
                     }
                     queued.clear();
                     inMulti = false;
-                    out.write("OK\r\n".getBytes(StandardCharsets.UTF_8));
+                    out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
                     continue;
                 }
 
