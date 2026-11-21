@@ -572,6 +572,18 @@ public class Main {
                     }
                 }
 
+                else if(name.equalsIgnoreCase("INCR")){
+                    String key = command.get(1);
+                    Entry entry = store.get(key);
+
+                    String value = (String)entry.value();
+                    long n =  Long.parseLong(value);
+                    n = n + 1;
+
+                    store.put(key, new Entry(String.valueOf(n), entry.expiresAt()));
+                    out.write((":" + n + "\r\n").getBytes(StandardCharsets.UTF_8));
+                }
+
                 else if(name.equalsIgnoreCase("TYPE")){
                     String key = command.get(1);
                     Entry entry = store.get(key);
