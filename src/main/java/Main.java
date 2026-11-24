@@ -103,6 +103,7 @@ public class Main {
                         out.write("-ERR DISCARD without MULTI\r\n".getBytes(StandardCharsets.UTF_8));
                         continue;
                     }
+                    watched.clear();
                     queued.clear();
                     inMulti = false;
                     out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
