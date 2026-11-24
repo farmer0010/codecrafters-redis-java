@@ -117,7 +117,7 @@ public class Main {
 
                     for(int i = 1; i < command.size(); i++){
                         String key = command.get(i);
-                        watched.put(key, versions.getOrDefault(key,0L));
+                        watched.put(key, versions.getOrDefault(key, 0L));
                     }
 
                     watched.put(key, versions.getOrDefault(key, 0L));
