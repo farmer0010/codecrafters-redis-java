@@ -119,8 +119,6 @@ public class Main {
                         String key = command.get(i);
                         watched.put(key, versions.getOrDefault(key, 0L));
                     }
-
-                    watched.put(key, versions.getOrDefault(key, 0L));
                     out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
                     continue;
                 }
