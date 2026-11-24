@@ -114,7 +114,11 @@ public class Main {
                         out.write("-ERR WATCH inside MULTI is not allowed\r\n".getBytes(StandardCharsets.UTF_8));
                         continue;
                     }
-                    String key = command.get(1);
+
+                    for(int i = 1; i < command.size(); i++){
+                        String key = command.get(i);
+                        watched.put(key, versions.getOrDefault(key,0L));
+                    }
 
                     watched.put(key, versions.getOrDefault(key, 0L));
                     out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
