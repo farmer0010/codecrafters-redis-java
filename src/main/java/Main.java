@@ -90,6 +90,11 @@ public class Main {
                     continue;
                 }
 
+                if(name.equalsIgnoreCase("WATCH")){
+                    out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
+                    continue;
+                }
+
                 if(inMulti){
                     queued.add(command);
                     out.write("+QUEUED\r\n".getBytes(StandardCharsets.UTF_8));
