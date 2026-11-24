@@ -16,8 +16,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.LinkedHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.HashMap;
 
 public class Main {
     private record Entry(Object value, long expiresAt) {}
@@ -27,6 +26,7 @@ public class Main {
     private static final Map<String, Entry> store = new ConcurrentHashMap<>();
     private static final Map<String, Queue<BlockingQueue<String>>> waiters = new ConcurrentHashMap<>();
     private static final Map<String, Queue<BlockingQueue<String>>> streamWaiters = new ConcurrentHashMap<>();
+    private static final Map<String, Long> versions = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
@@ -48,7 +48,7 @@ public class Main {
         try (clientSocket) {
             BufferedInputStream in = new BufferedInputStream(clientSocket.getInputStream());
             OutputStream out = clientSocket.getOutputStream();
-            Set<String> watched = new HashSet<>();
+            Map<String, Long> watched = new HashMap<>();
             List<String> command;
             boolean inMulti = false;
             List<List<String>> queued = new ArrayList<>();
@@ -68,17 +68,33 @@ public class Main {
                         continue;
                     }
 
-                    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+                    boolean dirty = false;
 
-                    for(List<String> queuedCommand : queued){
-                        execute(queuedCommand, buffer);
+                    for(Map.Entry<String, Long> w : watched.entrySet()){
+                        long now = versions.getOrDefault(w.getKey(), 0L);
+                        if(now != w.getValue()){
+                            dirty = true;
+                            break;
+                        }
                     }
 
-                    out.write(("*" + queued.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
-                    out.write(buffer.toByteArray());
+                    if(dirty){
+                        out.write("*-1\r\n".getBytes(StandardCharsets.UTF_8));
+                    }
+                    else{
+                        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+                        for(List<String> queuedCommand : queued){
+                            execute(queuedCommand, buffer);
+                        }
+
+                        out.write(("*" + queued.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
+                        out.write(buffer.toByteArray());
+                    }
 
                     queued.clear();
                     inMulti = false;
+                    watched.clear();
                     continue;
                 }
 
@@ -98,7 +114,9 @@ public class Main {
                         out.write("-ERR WATCH inside MULTI is not allowed\r\n".getBytes(StandardCharsets.UTF_8));
                         continue;
                     }
-                    watched.add(command.get(1));
+                    String key = command.get(1);
+
+                    watched.put(key, versions.getOrDefault(key, 0L));
                     out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
                     continue;
                 }
