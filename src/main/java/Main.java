@@ -155,6 +155,7 @@ public class Main {
             }
 
             store.put(key, new Entry(value, expiresAt));
+            versions.merge(key, 1L, Long::sum);
             out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
         } else if (name.equalsIgnoreCase("GET")) {
             String key = command.get(1);
@@ -675,6 +676,7 @@ public class Main {
             n = n + 1;
 
             store.put(key, new Entry(String.valueOf(n), expiresAt));
+            versions.merge(key, 1L, Long::sum);
             out.write((":" + n + "\r\n").getBytes(StandardCharsets.UTF_8));
         }
         else if(name.equalsIgnoreCase("TYPE")){
