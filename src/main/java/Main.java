@@ -16,6 +16,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.LinkedHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.Set;
+import java.util.HashSet;
 
 public class Main {
     private record Entry(Object value, long expiresAt) {}
@@ -46,6 +48,7 @@ public class Main {
         try (clientSocket) {
             BufferedInputStream in = new BufferedInputStream(clientSocket.getInputStream());
             OutputStream out = clientSocket.getOutputStream();
+            Set<String> watched = new HashSet<>();
             List<String> command;
             boolean inMulti = false;
             List<List<String>> queued = new ArrayList<>();
@@ -91,6 +94,11 @@ public class Main {
                 }
 
                 if(name.equalsIgnoreCase("WATCH")){
+                    if(inMulti){
+                        out.write("-ERR WATCH inside MULTI is not allowed\r\n".getBytes(StandardCharsets.UTF_8));
+                        continue;
+                    }
+                    watched.add(command.get(1));
                     out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
                     continue;
                 }
