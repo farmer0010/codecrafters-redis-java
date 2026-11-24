@@ -126,6 +126,7 @@ public class Main {
                 if(name.equalsIgnoreCase("UNWATCH")){
                     watched.clear();
                     out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
+                    continue;
                 }
 
                 if(inMulti){
