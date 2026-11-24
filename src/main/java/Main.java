@@ -172,7 +172,15 @@ public class Main {
             store.put(key, new Entry(value, expiresAt));
             versions.merge(key, 1L, Long::sum);
             out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
-        } else if (name.equalsIgnoreCase("GET")) {
+        }
+        else if (name.equalsIgnoreCase("INFO")) {
+            byte[] info = "role:master".getBytes(StandardCharsets.UTF_8);
+            out.write(("$" + info.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+            out.write(info);
+            out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+        }
+
+        else if (name.equalsIgnoreCase("GET")) {
             String key = command.get(1);
             Entry entry = store.get(key);
 
