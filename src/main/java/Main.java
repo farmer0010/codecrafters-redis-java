@@ -165,6 +165,7 @@ public class Main {
             out.write((":" + list.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
 
             Queue<BlockingQueue<String>> line = waiters.get(key);
+            System.out.println(Thread.currentThread().getName() + " RPUSH line=" + line);
             if (line != null) {
                 BlockingQueue<String> tray = line.poll();
                 if (tray != null) {
@@ -267,6 +268,7 @@ public class Main {
                 out.write("\r\n".getBytes(StandardCharsets.UTF_8));
             }
             else{
+                System.out.println(Thread.currentThread().getName() + " BLPOP checked empty");
                 Queue<BlockingQueue<String>> line =
                         waiters.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>());
 
@@ -274,6 +276,7 @@ public class Main {
                 long timeoutMs = (long) (seconds * 1000);
 
                 BlockingQueue<String> tray = new LinkedBlockingQueue<>();
+                System.out.println(Thread.currentThread().getName() + " BLPOP registered");
                 line.add(tray);
 
                 String element = null;
