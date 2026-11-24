@@ -27,14 +27,18 @@ public class Main {
     private static final Map<String, Queue<BlockingQueue<String>>> waiters = new ConcurrentHashMap<>();
     private static final Map<String, Queue<BlockingQueue<String>>> streamWaiters = new ConcurrentHashMap<>();
     private static final Map<String, Long> versions = new ConcurrentHashMap<>();
+    private static String role = "master";
 
     public static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
         int port = 6379;
 
-        for(int i = 0; i < args.length; i++) {
-            if(args[i].equals("--port")) {
-                port = Integer.parseInt(args[i+1]);
+        for(int i = 0; i < args.length - 1; i++){
+            if(args[i].equals("--port")){
+                port = Integer.parseInt(args[i + 1]);
+            }
+            else if(args[i].equals("--replicaof")){
+                role = "slave";
             }
         }
 
@@ -174,7 +178,7 @@ public class Main {
             out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
         }
         else if (name.equalsIgnoreCase("INFO")) {
-            byte[] info = "role:master".getBytes(StandardCharsets.UTF_8);
+            byte[] info = ("role:" + role).getBytes(StandardCharsets.UTF_8);
             out.write(("$" + info.length + "\r\n").getBytes(StandardCharsets.UTF_8));
             out.write(info);
             out.write("\r\n".getBytes(StandardCharsets.UTF_8));
