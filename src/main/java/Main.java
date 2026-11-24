@@ -151,28 +151,32 @@ public class Main {
             }
         } else if (name.equalsIgnoreCase("RPUSH")) {
             String key = command.get(1);
-            Entry entry = store.get(key);
-            List<String> list;
+            int size;
 
-            if (entry == null) {
-                list = new ArrayList<>();
-                store.put(key, new Entry(list, Long.MAX_VALUE));
-            }
-            else{
-                list = (List<String>) entry.value();
-            }
-            list.addAll(command.subList(2, command.size()));
-            out.write((":" + list.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
+            synchronized (waiters) {
+                Entry entry = store.get(key);
+                List<String> list;
 
-            Queue<BlockingQueue<String>> line = waiters.get(key);
-            System.out.println(Thread.currentThread().getName() + " RPUSH line=" + line);
-            if (line != null) {
-                BlockingQueue<String> tray = line.poll();
-                if (tray != null) {
-                    String element = list.remove(0);
-                    tray.offer(element);
+                if (entry == null) {
+                    list = new ArrayList<>();
+                    store.put(key, new Entry(list, Long.MAX_VALUE));
+                } else {
+                    list = (List<String>) entry.value();
+                }
+                list.addAll(command.subList(2, command.size()));
+                size = list.size();
+
+                Queue<BlockingQueue<String>> line = waiters.get(key);
+                if (line != null) {
+                    BlockingQueue<String> tray = line.poll();
+                    if (tray != null) {
+                        String element = list.remove(0);
+                        tray.offer(element);
+                    }
                 }
             }
+
+            out.write((":" + size + "\r\n").getBytes(StandardCharsets.UTF_8));
         }
         else if (name.equalsIgnoreCase("LPUSH")) {
             String key = command.get(1);
@@ -244,18 +248,52 @@ public class Main {
                 }
             }
         }
-        else  if(name.equalsIgnoreCase("BLPOP")) {
+        else if (name.equalsIgnoreCase("BLPOP")) {
             String key = command.get(1);
-            Entry entry = store.get(key);
-            List<String> list = null;
+            double seconds = Double.parseDouble(command.get(2));
+            long timeoutMs = (long) (seconds * 1000);
 
-            if(entry != null){
-                list = (List<String>) entry.value();
+            String element = null;
+            BlockingQueue<String> tray = null;
+            Queue<BlockingQueue<String>> line = null;
+
+            synchronized (waiters) {
+                Entry entry = store.get(key);
+                List<String> list = null;
+
+                if (entry != null) {
+                    list = (List<String>) entry.value();
+                }
+
+                if (list != null && list.size() > 0) {
+                    element = list.remove(0);
+                } else {
+                    line = waiters.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>());
+                    tray = new LinkedBlockingQueue<>();
+                    line.add(tray);
+                }
             }
 
-            if(list != null && list.size() > 0){
-                String element = list.remove(0);
-                out.write(("*2\r\n").getBytes(StandardCharsets.UTF_8));
+            if (element == null) {
+                try {
+                    if (timeoutMs == 0) {
+                        element = tray.take();
+                    } else {
+                        element = tray.poll(timeoutMs, TimeUnit.MILLISECONDS);
+                        if (element == null && !line.remove(tray)) {
+                            element = tray.take();
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+
+            if (element == null) {
+                out.write("*-1\r\n".getBytes(StandardCharsets.UTF_8));
+            } else {
+                out.write("*2\r\n".getBytes(StandardCharsets.UTF_8));
 
                 byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
                 out.write(("$" + keyBytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
@@ -266,52 +304,6 @@ public class Main {
                 out.write(("$" + bytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
                 out.write(bytes);
                 out.write("\r\n".getBytes(StandardCharsets.UTF_8));
-            }
-            else{
-                System.out.println(Thread.currentThread().getName() + " BLPOP checked empty");
-                Queue<BlockingQueue<String>> line =
-                        waiters.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>());
-
-                double seconds = Double.parseDouble(command.get(2));
-                long timeoutMs = (long) (seconds * 1000);
-
-                BlockingQueue<String> tray = new LinkedBlockingQueue<>();
-                System.out.println(Thread.currentThread().getName() + " BLPOP registered");
-                line.add(tray);
-
-                String element = null;
-                try{
-                    if(timeoutMs == 0){
-                        element = tray.take();
-                    }
-                    else{
-                        element = tray.poll(timeoutMs, TimeUnit.MILLISECONDS);
-                        if(element == null && !line.remove(tray)){
-                            element = tray.take();
-                        }
-                    }
-                }
-                catch (InterruptedException e){
-                    Thread.currentThread().interrupt();
-                    return;
-                }
-
-                if(element == null){
-                    out.write("*-1\r\n".getBytes(StandardCharsets.UTF_8) );
-                }
-                else{
-                    out.write(("*2\r\n").getBytes(StandardCharsets.UTF_8));
-
-                    byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
-                    out.write(("$" + keyBytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
-                    out.write(keyBytes);
-                    out.write("\r\n".getBytes(StandardCharsets.UTF_8));
-
-                    byte[] bytes = element.getBytes(StandardCharsets.UTF_8);
-                    out.write(("$" + bytes.length + "\r\n").getBytes(StandardCharsets.UTF_8));
-                    out.write(bytes);
-                    out.write("\r\n".getBytes(StandardCharsets.UTF_8));
-                }
             }
         }
 
