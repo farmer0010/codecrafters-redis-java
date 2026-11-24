@@ -123,6 +123,11 @@ public class Main {
                     continue;
                 }
 
+                if(name.equalsIgnoreCase("UNWATCH")){
+                    watched.clear();
+                    out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
+                }
+
                 if(inMulti){
                     queued.add(command);
                     out.write("+QUEUED\r\n".getBytes(StandardCharsets.UTF_8));
