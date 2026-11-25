@@ -99,13 +99,19 @@ public class Main {
 
             OutputStream discard = OutputStream.nullOutputStream();
             List<String> command;
+
+            long offset = 0;
             while ((command = readCommand(masterIn)) != null) {
+                int size = encodeCommand(command).length;
+
                 if(command.size() >= 2 && command.get(0).equals("REPLCONF") && command.get(1).equals("GETACK")){
-                    masterOut.write(encodeCommand(List.of("REPLCONF", "ACK", "0")));
+                    masterOut.write(encodeCommand(List.of("REPLCONF", "ACK", String.valueOf(offset))));
                 }
                 else{
                     execute(command, discard);
                 }
+
+                offset += size;
             }
         } catch (IOException e) {
             System.out.println("Replication error: " + e.getMessage());
