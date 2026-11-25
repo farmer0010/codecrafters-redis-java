@@ -33,6 +33,7 @@ public class Main {
     private static long replOffset = 0;
     private static final byte[] EMPTY_RDB = Base64.getDecoder().decode(
             "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==");
+    private static final List<OutputStream> replicas = new CopyOnWriteArrayList<>();
 
     public static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
@@ -206,6 +207,7 @@ public class Main {
 
             store.put(key, new Entry(value, expiresAt));
             versions.merge(key, 1L, Long::sum);
+            propagate(command);
             out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
         }
         else if (name.equalsIgnoreCase("INFO")) {
@@ -227,6 +229,7 @@ public class Main {
             out.write(("+FULLRESYNC " + replId + " " + replOffset + "\r\n").getBytes(StandardCharsets.UTF_8));
             out.write(("$" + EMPTY_RDB.length + "\r\n").getBytes(StandardCharsets.UTF_8));
             out.write(EMPTY_RDB);
+            replicas.add(out);
         }
 
         else if (name.equalsIgnoreCase("GET")) {
@@ -814,6 +817,33 @@ public class Main {
             }
         }
         return false;
+    }
+
+    private static byte[] encodeCommand(List<String> command){
+        ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        buf.writeBytes(("*" + command.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
+
+        for(String arg : command){
+            byte[] b = arg.getBytes(StandardCharsets.UTF_8);
+            buf.writeBytes(("$" + b.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+            buf.writeBytes(b);
+            buf.writeBytes("\r\n".getBytes(StandardCharsets.UTF_8));
+        }
+        return buf.toByteArray();
+    }
+
+    private static void propagate(List<String> command){
+        byte[] bytes = encodeCommand(command);
+
+        for(OutputStream r : replicas){
+            try {
+                synchronized(r){
+                    r.write(bytes);
+                }
+            } catch (IOException e) {
+                replicas.remove(r);
+            }
+        }
     }
 
     private static String readLine(InputStream in) throws IOException {
