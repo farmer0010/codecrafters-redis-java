@@ -28,6 +28,8 @@ public class Main {
     private static final Map<String, Queue<BlockingQueue<String>>> streamWaiters = new ConcurrentHashMap<>();
     private static final Map<String, Long> versions = new ConcurrentHashMap<>();
     private static String role = "master";
+    private static final String replId = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
+    private static long replOffset = 0;
 
     public static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
@@ -178,7 +180,11 @@ public class Main {
             out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
         }
         else if (name.equalsIgnoreCase("INFO")) {
-            byte[] info = ("role:" + role).getBytes(StandardCharsets.UTF_8);
+            String text = "role:" + role + "\r\n"
+                    + "master_replid:" + replId + "\r\n"
+                    + "master_repl_offset:" + replOffset;
+
+            byte[] info = text.getBytes(StandardCharsets.UTF_8);
             out.write(("$" + info.length + "\r\n").getBytes(StandardCharsets.UTF_8));
             out.write(info);
             out.write("\r\n".getBytes(StandardCharsets.UTF_8));
