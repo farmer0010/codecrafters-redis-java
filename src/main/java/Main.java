@@ -53,7 +53,19 @@ public class Main {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             if(role.equals("slave")) {
                 Socket master = new  Socket(masterHost, masterPort);
-                master.getOutputStream().write("*1\r\n$4\r\nPING\r\n".getBytes(StandardCharsets.UTF_8));
+                InputStream masterIn = new  BufferedInputStream(master.getInputStream());
+                OutputStream masterOut = master.getOutputStream();
+
+                masterOut.write("*1\r\n$4\r\nPING\r\n".getBytes(StandardCharsets.UTF_8));
+                readLine(masterIn);
+
+                String portStr = String.valueOf(port);
+                masterOut.write(("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$"
+                        + portStr.length() + "\r\n" + portStr + "\r\n").getBytes(StandardCharsets.UTF_8));
+                readLine(masterIn);
+
+                masterOut.write("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n".getBytes(StandardCharsets.UTF_8));
+                readLine(masterIn);
             }
 
             serverSocket.setReuseAddress(true);
