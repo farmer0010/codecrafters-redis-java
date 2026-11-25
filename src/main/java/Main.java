@@ -216,6 +216,10 @@ public class Main {
             out.write("\r\n".getBytes(StandardCharsets.UTF_8));
         }
 
+        else if (name.equalsIgnoreCase("REPLCONF")) {
+            out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
+        }
+
         else if (name.equalsIgnoreCase("GET")) {
             String key = command.get(1);
             Entry entry = store.get(key);
