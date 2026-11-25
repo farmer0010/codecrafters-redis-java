@@ -227,6 +227,7 @@ public class Main {
             out.write(("+FULLRESYNC " + replId + " " + replOffset + "\r\n").getBytes(StandardCharsets.UTF_8));
             out.write(("$" + EMPTY_RDB.length + "\r\n").getBytes(StandardCharsets.UTF_8));
             out.write(EMPTY_RDB);
+        }
 
         else if (name.equalsIgnoreCase("GET")) {
             String key = command.get(1);
