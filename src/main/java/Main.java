@@ -220,6 +220,10 @@ public class Main {
             out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
         }
 
+        else if (name.equalsIgnoreCase("PSYNC")) {
+            out.write("+FULLRESYNC 8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb 0\r\n".getBytes(StandardCharsets.UTF_8));
+        }
+
         else if (name.equalsIgnoreCase("GET")) {
             String key = command.get(1);
             Entry entry = store.get(key);
