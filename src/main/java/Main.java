@@ -17,6 +17,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.LinkedHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.HashMap;
+import java.util.Base64;
 
 public class Main {
     private record Entry(Object value, long expiresAt) {}
@@ -30,6 +31,8 @@ public class Main {
     private static String role = "master";
     private static final String replId = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
     private static long replOffset = 0;
+    private static final byte[] EMPTY_RDB = Base64.getDecoder().decode(
+            "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==");
 
     public static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
@@ -221,8 +224,9 @@ public class Main {
         }
 
         else if (name.equalsIgnoreCase("PSYNC")) {
-            out.write("+FULLRESYNC 8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb 0\r\n".getBytes(StandardCharsets.UTF_8));
-        }
+            out.write(("+FULLRESYNC " + replId + " " + replOffset + "\r\n").getBytes(StandardCharsets.UTF_8));
+            out.write(("$" + EMPTY_RDB.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+            out.write(EMPTY_RDB);
 
         else if (name.equalsIgnoreCase("GET")) {
             String key = command.get(1);
