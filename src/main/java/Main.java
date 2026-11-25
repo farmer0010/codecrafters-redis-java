@@ -56,27 +56,14 @@ public class Main {
         }
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            if(role.equals("slave")) {
-                Socket master = new  Socket(masterHost, masterPort);
-                InputStream masterIn = new  BufferedInputStream(master.getInputStream());
-                OutputStream masterOut = master.getOutputStream();
-
-                masterOut.write("*1\r\n$4\r\nPING\r\n".getBytes(StandardCharsets.UTF_8));
-                readLine(masterIn);
-
-                String portStr = String.valueOf(port);
-                masterOut.write(("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$"
-                        + portStr.length() + "\r\n" + portStr + "\r\n").getBytes(StandardCharsets.UTF_8));
-                readLine(masterIn);
-
-                masterOut.write("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n".getBytes(StandardCharsets.UTF_8));
-                readLine(masterIn);
-
-                masterOut.write("*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n".getBytes(StandardCharsets.UTF_8));
-                readLine(masterIn);
-            }
-
             serverSocket.setReuseAddress(true);
+
+            if(role.equals("slave")){
+                final String mh = masterHost;
+                final int mp = masterPort;
+                final int myPort = port;
+                new Thread(() -> connectToMaster(mh, mp, myPort)).start();
+            }
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
@@ -84,6 +71,39 @@ public class Main {
             }
         } catch (IOException e) {
             System.out.println("IOException: " + e.getMessage());
+        }
+    }
+
+    private static void connectToMaster(String masterHost, int masterPort, int myPort) {
+        try (Socket master = new Socket(masterHost, masterPort)) {
+            InputStream masterIn = new BufferedInputStream(master.getInputStream());
+            OutputStream masterOut = master.getOutputStream();
+
+            masterOut.write("*1\r\n$4\r\nPING\r\n".getBytes(StandardCharsets.UTF_8));
+            readLine(masterIn);
+
+            String portStr = String.valueOf(myPort);
+            masterOut.write(("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$"
+                    + portStr.length() + "\r\n" + portStr + "\r\n").getBytes(StandardCharsets.UTF_8));
+            readLine(masterIn);
+
+            masterOut.write("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n".getBytes(StandardCharsets.UTF_8));
+            readLine(masterIn);
+
+            masterOut.write("*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n".getBytes(StandardCharsets.UTF_8));
+            readLine(masterIn);
+
+            String rdbHeader = readLine(masterIn);
+            int rdbLen = Integer.parseInt(rdbHeader.substring(1));
+            masterIn.readNBytes(rdbLen);
+
+            OutputStream discard = OutputStream.nullOutputStream();
+            List<String> command;
+            while ((command = readCommand(masterIn)) != null) {
+                execute(command, discard);
+            }
+        } catch (IOException e) {
+            System.out.println("Replication error: " + e.getMessage());
         }
     }
 
