@@ -35,16 +35,27 @@ public class Main {
         System.out.println("Logs from your program will appear here!");
         int port = 6379;
 
+        String masterHost = null;
+        int masterPort = 0;
+
         for(int i = 0; i < args.length - 1; i++){
             if(args[i].equals("--port")){
                 port = Integer.parseInt(args[i + 1]);
             }
             else if(args[i].equals("--replicaof")){
                 role = "slave";
+                String[] hostPort = args[i + 1].split(" ");
+                masterHost = hostPort[0];
+                masterPort = Integer.parseInt(hostPort[1]);
             }
         }
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
+            if(role.equals("slave")) {
+                Socket master = new  Socket(masterHost, masterPort);
+                master.getOutputStream().write("*1\r\n$4\r\nPING\r\n".getBytes(StandardCharsets.UTF_8));
+            }
+
             serverSocket.setReuseAddress(true);
 
             while (true) {
