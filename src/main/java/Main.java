@@ -32,7 +32,7 @@ public class Main {
     private static final Map<String, Long> versions = new ConcurrentHashMap<>();
     private static String role = "master";
     private static final String replId = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
-    private static AtomicLong replOffset = new AtomicLong(0);
+    private static final AtomicLong replOffset = new AtomicLong(0);
     private static final byte[] EMPTY_RDB = Base64.getDecoder().decode(
             "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==");
     private static final List<OutputStream> replicas = new CopyOnWriteArrayList<>();
@@ -306,7 +306,7 @@ public class Main {
                 }
                 acked = countAcked(target);
             }
-            out.write(":" + acked + "\r\n").getBytes(StandardCharsets.UTF_8));
+            out.write((":" + acked + "\r\n").getBytes(StandardCharsets.UTF_8));
         }
 
         else if (name.equalsIgnoreCase("GET")) {
