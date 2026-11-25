@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.HashMap;
 import java.util.Base64;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class Main {
     private record Entry(Object value, long expiresAt) {}
@@ -31,10 +32,11 @@ public class Main {
     private static final Map<String, Long> versions = new ConcurrentHashMap<>();
     private static String role = "master";
     private static final String replId = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
-    private static long replOffset = 0;
+    private static AtomicLong replOffset = new AtomicLong(0);
     private static final byte[] EMPTY_RDB = Base64.getDecoder().decode(
             "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==");
     private static final List<OutputStream> replicas = new CopyOnWriteArrayList<>();
+    private static final Map<OutputStream, Long> replicaAcks = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
@@ -254,7 +256,11 @@ public class Main {
         }
 
         else if (name.equalsIgnoreCase("REPLCONF")) {
-            out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
+            if (command.size() >= 3 && command.get(1).equalsIgnoreCase("ACK")) {
+                replicaAcks.put(out, Long.parseLong(command.get(2)));
+            } else {
+                out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
+            }
         }
 
         else if (name.equalsIgnoreCase("PSYNC")) {
@@ -265,7 +271,42 @@ public class Main {
         }
 
         else if(name.equalsIgnoreCase("WAIT")){
-            out.write((":" + replicas.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
+            int numReplicas = Integer.parseInt(command.get(1));
+            long timeoutMs = Long.parseLong(command.get(2));
+            long target = replOffset.get();
+
+            if(target == 0){
+                out.write((":" + replicas.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
+                return;
+            }
+
+            byte[] getack = encodeCommand(List.of("REPLCONF", "GETACK", "*"));
+            for(OutputStream r : replicas){
+                try{
+                    synchronized(r){
+                        r.write(getack);
+                    }
+                }
+                catch(IOException e){
+                    replicas.remove(r);
+                }
+            }
+            replOffset.addAndGet(getack.length);
+
+            long deadline = System.currentTimeMillis() + timeoutMs;
+            int acked = countAcked(target);
+
+            while(acked < numReplicas && System.currentTimeMillis() < deadline){
+                try{
+                    Thread.sleep(10);
+                }
+                catch(InterruptedException e){
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+                acked = countAcked(target);
+            }
+            out.write(":" + acked + "\r\n").getBytes(StandardCharsets.UTF_8));
         }
 
         else if (name.equalsIgnoreCase("GET")) {
@@ -870,6 +911,7 @@ public class Main {
 
     private static void propagate(List<String> command){
         byte[] bytes = encodeCommand(command);
+        replOffset.addAndGet(bytes.length);
 
         for(OutputStream r : replicas){
             try {
@@ -880,6 +922,17 @@ public class Main {
                 replicas.remove(r);
             }
         }
+    }
+
+    private static int countAcked(long target){
+        int n = 0;
+        for(OutputStream r : replicas){
+            Long ack = replicaAcks.get(r);
+            if(ack != null && ack >= target){
+                n++;
+            }
+        }
+        return n;
     }
 
     private static String readLine(InputStream in) throws IOException {
