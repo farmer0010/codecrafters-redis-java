@@ -104,7 +104,7 @@ public class Main {
             while ((command = readCommand(masterIn)) != null) {
                 int size = encodeCommand(command).length;
 
-                if(command.size() >= 2 && command.get(0).equals("REPLCONF") && command.get(1).equals("GETACK")){
+                if(command.size() >= 2 && command.get(0).equalsIgnoreCase("REPLCONF") && command.get(1).equalsIgnoreCase("GETACK")){
                     masterOut.write(encodeCommand(List.of("REPLCONF", "ACK", String.valueOf(offset))));
                 }
                 else{
@@ -265,7 +265,7 @@ public class Main {
         }
 
         else if(name.equalsIgnoreCase("WAIT")){
-            out.write(":" + replicas.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
+            out.write((":" + replicas.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
         }
 
         else if (name.equalsIgnoreCase("GET")) {
