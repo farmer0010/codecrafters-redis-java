@@ -100,7 +100,12 @@ public class Main {
             OutputStream discard = OutputStream.nullOutputStream();
             List<String> command;
             while ((command = readCommand(masterIn)) != null) {
-                execute(command, discard);
+                if(command.size() >= 2 && command.get(0).equals("REPLCONF") && command.get(1).equals("GETACK")){
+                    masterOut.write(encodeCommand(List.of("REPLCONF", "ACK", "0")));
+                }
+                else{
+                    execute(command, discard);
+                }
             }
         } catch (IOException e) {
             System.out.println("Replication error: " + e.getMessage());
