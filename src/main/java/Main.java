@@ -71,6 +71,10 @@ public class Main {
         }
         loadRdb();
 
+        if(config.get("appendonly".equals("yes"))){
+            new File(config.get("dir")).mkdirs();
+        }
+
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             serverSocket.setReuseAddress(true);
 
