@@ -977,6 +977,8 @@ public class Main {
         try (InputStream in = new BufferedInputStream(new FileInputStream(file))){
             in.readNBytes(9);
 
+            long expiresAt = Long.MAX_VALUE;
+
             while(true){
                 int op = in.read();
                 if(op == -1 || op == 0xFF){
@@ -994,10 +996,20 @@ public class Main {
                     readSize(in);
                     readSize(in);
                 }
+                else if(op == 0xFC){
+                    expiresAt = readLE(in, 8);
+                }
+                else if(op == 0xFD){
+                    expiresAt = readLE(in, 4) * 1000;
+                }
                 else if(op == 0x00){
                     String key = readString(in);
                     String value = readString(in);
-                    store.put(key, new Entry(value, Long.MAX_VALUE));
+
+                    if(expiresAt > System.currentTimeMillis()){
+                        store.put(key, new Entry(value, expiresAt));
+                    }
+                    expiresAt = Long.MAX_VALUE;
                 }
                 else{
                     System.out.println("Unknown RDB opcode: " + op);
@@ -1050,6 +1062,15 @@ public class Main {
         }
         int len = sizeForm(first, in);
         return new String(in.readNBytes(len), StandardCharsets.UTF_8);
+    }
+
+    private static long readLE(InputStream in, int n) throws IOException {
+        byte[] b = in.readNBytes(n);
+        long v = 0;
+
+        for(int i = 0; i < n; i++){
+            v |= (long) (b[i] & 0xFF) << (8 * i);
+        }
     }
 
     private static String readLine(InputStream in) throws IOException {
