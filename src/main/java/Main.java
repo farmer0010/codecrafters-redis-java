@@ -1071,6 +1071,7 @@ public class Main {
         for(int i = 0; i < n; i++){
             v |= (long) (b[i] & 0xFF) << (8 * i);
         }
+        return v;
     }
 
     private static String readLine(InputStream in) throws IOException {
