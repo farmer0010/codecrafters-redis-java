@@ -65,11 +65,8 @@ public class Main {
                 masterHost = hostPort[0];
                 masterPort = Integer.parseInt(hostPort[1]);
             }
-            else if(args[i].equals("--dir")){
-                config.put("dir", args[i + 1]);
-            }
-            else if(args[i].equals("--dbfilename")){
-                config.put("dbfilename", args[i + 1]);
+            else if(args[i].startsWith("--") && config.containsKey(args[i].substring(2))){
+                config.put(args[i].substring(2), args[i + 1]);
             }
         }
         loadRdb();
