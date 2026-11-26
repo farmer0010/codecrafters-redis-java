@@ -87,7 +87,18 @@ public class Main {
 
                 String incrName = findIncrFile(manifest);
                 if(incrName != null){
-                    aofOut = new FileOutputStream(new File(aofDir, incrName), true);
+                    File incrFile = new File(aofDir, incrName);
+
+                    if(incrFile.exists()){
+                        try(InputStream in = new BufferedInputStream(new FileInputStream(incrFile))){
+                            OutputStream discard = OutputStream.nullOutputStream();
+                            List<String> command;
+                            while((command = readCommand(in)) != null){
+                                execute(command, discard);
+                            }
+                        }
+                    }
+                    aofOut = new FileOutputStream(incrFile, true);
                 }
             }
             catch(IOException e){
