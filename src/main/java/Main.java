@@ -37,6 +37,8 @@ public class Main {
             "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==");
     private static final List<OutputStream> replicas = new CopyOnWriteArrayList<>();
     private static final Map<OutputStream, Long> replicaAcks = new ConcurrentHashMap<>();
+    private static String rdbDir = "";
+    private static String rdbFileName = "";
 
     public static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
@@ -54,6 +56,12 @@ public class Main {
                 String[] hostPort = args[i + 1].split(" ");
                 masterHost = hostPort[0];
                 masterPort = Integer.parseInt(hostPort[1]);
+            }
+            else if(args[i].equals("--dir")){
+                rdbDir = args[i + 1];
+            }
+            else if(args[i].equals("--dbfilename")){
+                rdbFileName = args[i + 1];
             }
         }
 
@@ -307,6 +315,22 @@ public class Main {
                 acked = countAcked(target);
             }
             out.write((":" + acked + "\r\n").getBytes(StandardCharsets.UTF_8));
+        }
+
+        else if(name.equalsIgnoreCase("CONFIG")){
+            if(command.size() >= 3 && command.get(1).equalsIgnoreCase("GET")) {
+                String param = command.get(2);
+
+                if(param.equalsIgnoreCase("dir")){
+                    out.write(encodeCommand(List.of("dir", rdbDir)));
+                }
+                else if(param.equalsIgnoreCase("dbfilename")){
+                    out.write(encodeCommand(List.of("dbfilename", rdbFileName)));
+                }
+                else{
+                    out.write("*0\r\n".getBytes(StandardCharsets.UTF_8));
+                }
+            }
         }
 
         else if (name.equalsIgnoreCase("GET")) {
