@@ -71,8 +71,8 @@ public class Main {
         }
         loadRdb();
 
-        if(config.get("appendonly".equals("yes"))){
-            new File(config.get("dir")).mkdirs();
+        if(config.get("appendonly").equals("yes")){
+            new File(config.get("dir"), config.get("appenddirname")).mkdirs();
         }
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
