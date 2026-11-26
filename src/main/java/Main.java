@@ -22,6 +22,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 
 public class Main {
     private record Entry(Object value, long expiresAt) {}
@@ -40,6 +41,7 @@ public class Main {
     private static final List<OutputStream> replicas = new CopyOnWriteArrayList<>();
     private static final Map<OutputStream, Long> replicaAcks = new ConcurrentHashMap<>();
     private static final Map<String, String> config = new ConcurrentHashMap<>();
+    private static FileOutputStream aofOut = null;
 
     public static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
@@ -74,16 +76,22 @@ public class Main {
         if(config.get("appendonly").equals("yes")){
             File aofDir = new File(config.get("dir"), config.get("appenddirname"));
             aofDir.mkdirs();
+            File manifest = new File(aofDir, config.get("appendfilename") + ".manifest");
 
-            File aofFile = new File(aofDir, config.get("appendfilename") + ".1.incr.aof");
-            try {
-                aofFile.createNewFile();
-                File manifest = new File(aofDir, config.get("appendfilename") + ".manifest");
-                String line = "file " + config.get("appendfilename") + ".1.incr.aof seq 1 type i\n";
-                java.nio.file.Files.writeString(manifest.toPath(), line);
+            try{
+                if(!manifest.exists()){
+                    String defaultName = config.get("appendfilename") + ".1.incr.aof";
+                    new File(aofDir, defaultName).createNewFile();
+                    java.nio.file.Files.writeString(manifest.toPath(), "file " + defaultName + " seq 1 type i\n");
+                }
+
+                String incrName = findIncrFile(manifest);
+                if(incrName != null){
+                    aofOut = new FileOutputStream(new File(aofDir, incrName), true);
+                }
             }
-            catch (IOException e) {
-                System.out.println("AOF file create error: " + e.getMessage());
+            catch(IOException e){
+                System.out.println("AOF setup error: " + e.getMessage());
             }
         }
 
@@ -271,6 +279,7 @@ public class Main {
 
             store.put(key, new Entry(value, expiresAt));
             versions.merge(key, 1L, Long::sum);
+            appendAof(command);
             propagate(command);
             out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
         }
@@ -1093,6 +1102,40 @@ public class Main {
             v |= (long) (b[i] & 0xFF) << (8 * i);
         }
         return v;
+    }
+
+    private static String findIncrFile(File manifest) throws IOException {
+        for(String line : java.nio.file.Files.readAllLines(manifest.toPath())){
+            String[] t = line.trim().split(" ");
+            String file = null;
+            String type = null;
+
+            for(int i = 0; i + 1 < t.length; i+= 2){
+                if(t[i].equals("file")){
+                    file = t[i+1];
+                }
+                else if(t[i].equals("type")){
+                    type = t[i+1];
+                }
+            }
+
+            if("i".equals(type)){
+                return file;
+            }
+        }
+        return null;
+    }
+
+    private static void appendAof(List<String> command) throws IOException{
+        if(aofOut == null){
+            return ;
+        }
+        synchronized(aofOut){
+            aofOut.write(encodeCommand(command));
+            if(config.get("appendfsync").equals("always")){
+                aofOut.getFD().sync();
+            }
+        }
     }
 
     private static String readLine(InputStream in) throws IOException {
