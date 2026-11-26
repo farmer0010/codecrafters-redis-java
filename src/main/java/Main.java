@@ -78,6 +78,9 @@ public class Main {
             File aofFile = new File(aofDir, config.get("appendfilename") + ".1.incr.aof");
             try {
                 aofFile.createNewFile();
+                File manifest = new File(aofDir, config.get("appendfilename") + ".manifest");
+                String line = "file " + config.get("appendfilename") + ".1.incr.aof seq 1 type i\n";
+                java.nio,file.Files.writeString(manifest.toPath(), line);
             }
             catch (IOException e) {
                 System.out.println("AOF file create error: " + e.getMessage());
