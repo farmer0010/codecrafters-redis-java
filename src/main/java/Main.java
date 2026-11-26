@@ -72,7 +72,16 @@ public class Main {
         loadRdb();
 
         if(config.get("appendonly").equals("yes")){
-            new File(config.get("dir"), config.get("appenddirname")).mkdirs();
+            File aofDir = new File(config.get("dir"), config.get("appenddirname"));
+            aofDir.mkdirs();
+
+            File aofFile = new File(aofDir, config.get("appendfilename") + ".1.incr.aof");
+            try {
+                aofFile.createNewFile();
+            }
+            catch (IOException e) {
+                System.out.println("AOF file create error: " + e.getMessage());
+            }
         }
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
