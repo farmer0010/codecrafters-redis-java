@@ -20,6 +20,8 @@ import java.util.HashMap;
 import java.util.Base64;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
+import java.io.File;
+import java.io.FileInputStream;
 
 public class Main {
     private record Entry(Object value, long expiresAt) {}
@@ -64,6 +66,7 @@ public class Main {
                 rdbFileName = args[i + 1];
             }
         }
+        loadRdb();
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             serverSocket.setReuseAddress(true);
@@ -331,6 +334,9 @@ public class Main {
                     out.write("*0\r\n".getBytes(StandardCharsets.UTF_8));
                 }
             }
+        }
+        else if(name.equalsIgnoreCase("KEYS")){
+            out.write(encodeCommand(new ArrayList<>(store.keySet())));
         }
 
         else if (name.equalsIgnoreCase("GET")) {
@@ -957,6 +963,93 @@ public class Main {
             }
         }
         return n;
+    }
+
+    private static void loadRdb(){
+        if(rdbDir.isEmpty() || rdbFileName.isEmpty()){
+            return;
+        }
+        File file = new File(rdbDir, rdbFileName);
+        if(!file.exists()){
+            return;
+        }
+
+        try (InputStream in = new BufferedInputStream(new FileInputStream(file))){
+            in.readNBytes(9);
+
+            while(true){
+                int op = in.read();
+                if(op == -1 || op == 0xFF){
+                    break;
+                }
+
+                if(op == 0xFA){
+                    readString(in);
+                    readString(in);
+                }
+                else if(op == 0xFE){
+                    readSize(in);
+                }
+                else if(op == 0xFB){
+                    readSize(in);
+                    readSize(in);
+                }
+                else if(op == 0x00){
+                    String key = readString(in);
+                    String value = readString(in);
+                    store.put(key, new Entry(value, Long.MAX_VALUE));
+                }
+                else{
+                    System.out.println("Unknown RDB opcode: " + op);
+                    break;
+                }
+            }
+        }
+        catch (IOException e){
+            System.out.println("RDB load error: " + e.getMessage());
+        }
+    }
+
+    private static int readSize(InputStream in) throws IOException {
+        return sizeForm(in.read(), in);
+    }
+
+    private static int sizeForm(int first, InputStream in) throws IOException {
+        int type = first >> 6;
+        if(type == 0){
+            return first & 0x3F;
+        }
+        if(type == 1){
+            return ((first & 0x3F) << 8) | in.read();
+        }
+        if(type == 2){
+            byte[] b = in.readNBytes(4);
+            return ((b[0] & 0xFF) << 24) | ((b[1] & 0xFF) << 16) | ((b[2] & 0xFF) << 8) | (b[3] & 0xFF);
+        }
+        throw new IOException("special encoding where size expected: " + first);
+    }
+
+    private static void readString(InputStream in) throws IOException {
+        int first = in.read();
+
+        if((first >> 6) == 3){
+            int fmt = first & 0x3F;
+
+            if(fmt == 0){
+                return String.valueOf((byte) in.read());
+            }
+            if(fmt == 1){
+                byte[] b = in.readNBytes(2);
+                return String.valueOf((short) ((b[0] & 0xFF) | ((b[1] & 0xFF) << 8)));
+            }
+            if(fmt == 2){
+                byte[] b = in.readNBytes(4);
+                return String.valueOf((b[0] & 0xFF) | ((b[1] & 0xFF) << 8) | ((b[2] & 0xFF) << 16) | ((b[3] & 0xFF) << 24));
+            }
+            throw new IOException("unsupported string encoding: " + fmt);
+        }
+        int len = sizeForm(first, in);
+        return new String(in.readNBytes(len), StandardCharsets.UTF_8);
     }
 
     private static String readLine(InputStream in) throws IOException {
