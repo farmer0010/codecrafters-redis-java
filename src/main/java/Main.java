@@ -1029,7 +1029,7 @@ public class Main {
         throw new IOException("special encoding where size expected: " + first);
     }
 
-    private static void readString(InputStream in) throws IOException {
+    private static String readString(InputStream in) throws IOException {
         int first = in.read();
 
         if((first >> 6) == 3){
