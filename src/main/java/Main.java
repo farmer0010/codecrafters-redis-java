@@ -39,12 +39,18 @@ public class Main {
             "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog==");
     private static final List<OutputStream> replicas = new CopyOnWriteArrayList<>();
     private static final Map<OutputStream, Long> replicaAcks = new ConcurrentHashMap<>();
-    private static String rdbDir = "";
-    private static String rdbFileName = "";
+    private static final Map<String, String> config = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
         int port = 6379;
+
+        config.put("dir", System.getProperty("user.dir"));
+        config.put("dbfilename", "");
+        config.put("appendonly", "no");
+        config.put("appenddirname", "appendonlydir");
+        config.put("appendfilename", "appendonly.aof");
+        config.put("appendfsync", "everysec");
 
         String masterHost = null;
         int masterPort = 0;
@@ -60,10 +66,10 @@ public class Main {
                 masterPort = Integer.parseInt(hostPort[1]);
             }
             else if(args[i].equals("--dir")){
-                rdbDir = args[i + 1];
+                config.put("dir", args[i + 1]);
             }
             else if(args[i].equals("--dbfilename")){
-                rdbFileName = args[i + 1];
+                config.put("dbfilename", args[i + 1]);
             }
         }
         loadRdb();
@@ -321,20 +327,19 @@ public class Main {
         }
 
         else if(name.equalsIgnoreCase("CONFIG")){
-            if(command.size() >= 3 && command.get(1).equalsIgnoreCase("GET")) {
-                String param = command.get(2);
+            if(command.size() >= 3 && command.get(1).equalsIgnoreCase("GET")){
+                String param = command.get(2).toLowerCase();
+                String value = config.get(param);
 
-                if(param.equalsIgnoreCase("dir")){
-                    out.write(encodeCommand(List.of("dir", rdbDir)));
-                }
-                else if(param.equalsIgnoreCase("dbfilename")){
-                    out.write(encodeCommand(List.of("dbfilename", rdbFileName)));
+                if(value != null){
+                    out.write(encodeCommand(List.of(param, value)));
                 }
                 else{
                     out.write("*0\r\n".getBytes(StandardCharsets.UTF_8));
                 }
             }
         }
+
         else if(name.equalsIgnoreCase("KEYS")){
             out.write(encodeCommand(new ArrayList<>(store.keySet())));
         }
@@ -966,10 +971,13 @@ public class Main {
     }
 
     private static void loadRdb(){
-        if(rdbDir.isEmpty() || rdbFileName.isEmpty()){
-            return;
+        String dir = config.get("dir");
+        String name = config.get("dbfilename");
+        if(name.isEmpty()){
+            return ;
         }
-        File file = new File(rdbDir, rdbFileName);
+
+        File file = new File(dir, name);
         if(!file.exists()){
             return;
         }
