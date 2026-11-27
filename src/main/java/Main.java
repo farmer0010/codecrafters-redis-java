@@ -282,6 +282,22 @@ public class Main {
                     continue;
                 }
 
+                if(name.equalsIgnoreCase("UNSUBSCRIBE")){
+                    String channel = command.get(1);
+                    subscribed.remove(channel);
+
+                    Set<OutputStream> subs = channelSubs.get(channel);
+                    if(subs != null){
+                        subs.remove(out);
+                    }
+
+                    out.write("*3\r\n".getBytes(StandardCharsets.UTF_8));
+                    writeBulk(out, "unsubscribe");
+                    writeBulk(out, channel);
+                    out.write((":" + subscribed.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
+                    continue;
+                }
+
                 if(inMulti){
                     queued.add(command);
                     out.write("+QUEUED\r\n".getBytes(StandardCharsets.UTF_8));
