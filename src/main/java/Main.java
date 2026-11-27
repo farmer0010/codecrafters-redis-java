@@ -184,6 +184,13 @@ public class Main {
             while ((command = readCommand(in)) != null) {
                 String name = command.get(0);
 
+                if(!subscribed.isEmpty() && !isAllowedInSubscribe(name)){
+                    out.write(("-ERR Can't execute '" + name.toLowerCase()
+                            + "': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context\r\n")
+                            .getBytes(StandardCharsets.UTF_8));
+                    continue;
+                }
+
                 if(name.equalsIgnoreCase("MULTI")){
                     inMulti = true;
                     out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
@@ -996,6 +1003,16 @@ public class Main {
         out.write(("$" + b.length + "\r\n").getBytes(StandardCharsets.UTF_8));
         out.write(b);
         out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static boolean isAllowedInSubscribe(String name) {
+        return name.equalsIgnoreCase("SUBSCRIBE")
+                || name.equalsIgnoreCase("UNSUBSCRIBE")
+                || name.equalsIgnoreCase("PSUBSCRIBE")
+                || name.equalsIgnoreCase("PUNSUBSCRIBE")
+                || name.equalsIgnoreCase("PING")
+                || name.equalsIgnoreCase("QUIT")
+                || name.equalsIgnoreCase("RESET");
     }
 
     private static void propagate(List<String> command){
