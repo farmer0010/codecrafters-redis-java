@@ -405,9 +405,28 @@ public class Main {
         }
 
         else if(name.equalsIgnoreCase("PUBLISH")){
-            Set<OutputStream> subs = channelSubs.get(command.get(1));
-            int n = (subs == null) ? 0 : subs.size();
-            out.write((":" + n + "\r\n").getBytes(StandardCharsets.UTF_8));
+           String channel = command.get(1);
+           String message = command.get(2);
+           Set<OutputStream> subs = channelSubs.get(channel);
+
+           int n = 0;
+
+           if(subs != null){
+               byte[] payload = encodeCommand(List.of("message", channel, message));
+
+               for(OutputStream sub : subs){
+                   try{
+                       synchronized(sub){
+                           sub.write(payload);
+                       }
+                       n++;
+                   }
+                   catch(IOException e){
+                       subs.remove(sub);
+                   }
+               }
+           }
+           out.write((":" + n + "\r\n").getBytes(StandardCharsets.UTF_8));
         }
 
         else if (name.equalsIgnoreCase("GET")) {
