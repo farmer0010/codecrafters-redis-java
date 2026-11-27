@@ -44,6 +44,7 @@ public class Main {
     private static final Map<OutputStream, Long> replicaAcks = new ConcurrentHashMap<>();
     private static final Map<String, String> config = new ConcurrentHashMap<>();
     private static FileOutputStream aofOut = null;
+    private static final Map<String, Set<OutputStream>> channelSubs = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
@@ -272,6 +273,7 @@ public class Main {
                 if(name.equalsIgnoreCase("SUBSCRIBE")){
                     String channel = command.get(1);
                     subscribed.add(channel);
+                    channelSubs.computeIfAbsent(channel, k -> ConcurrentHashMap.newKeySet()).add(out);
 
                     out.write("*3\r\n".getBytes(StandardCharsets.UTF_8));
                     writeBulk(out, "subscribe");
@@ -400,6 +402,12 @@ public class Main {
 
         else if(name.equalsIgnoreCase("KEYS")){
             out.write(encodeCommand(new ArrayList<>(store.keySet())));
+        }
+
+        else if(name.equalsIgnoreCase("PUBLISH")){
+            Set<OutputStream> subs = channelSubs.get(command.get(1));
+            int n = (subs == null) ? 0 : subs.size();
+            out.write((":" + n + "\r\n").getBytes(StandardCharsets.UTF_8));
         }
 
         else if (name.equalsIgnoreCase("GET")) {
