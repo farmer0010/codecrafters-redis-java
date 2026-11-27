@@ -191,6 +191,11 @@ public class Main {
                     continue;
                 }
 
+                if(!subscribed.isEmpty() && name.equalsIgnoreCase){
+                    out.write(encodeCommand(List.of("pong", "")));
+                    continue;
+                }
+
                 if(name.equalsIgnoreCase("MULTI")){
                     inMulti = true;
                     out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
