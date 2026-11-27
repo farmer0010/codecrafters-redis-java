@@ -23,6 +23,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Main {
     private record Entry(Object value, long expiresAt) {}
@@ -174,6 +176,7 @@ public class Main {
             BufferedInputStream in = new BufferedInputStream(clientSocket.getInputStream());
             OutputStream out = clientSocket.getOutputStream();
             Map<String, Long> watched = new HashMap<>();
+            Set<String> subscribed = new HashSet<>();
             List<String> command;
             boolean inMulti = false;
             List<List<String>> queued = new ArrayList<>();
@@ -253,6 +256,16 @@ public class Main {
                     watched.clear();
                     out.write("+OK\r\n".getBytes(StandardCharsets.UTF_8));
                     continue;
+                }
+
+                if(name.equalsIgnoreCase("SUBSCRIBE")){
+                    String channel = command.get(1);
+                    subscribed.add(channel);
+
+                    out.write("*3\r\n".getBytes(StandardCharsets.UTF_8));
+                    writeBulk(out, "subscribe");
+                    writeBulk(out, channel);
+                    out.write((":" + subscribed.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
                 }
 
                 if(inMulti){
@@ -975,6 +988,13 @@ public class Main {
             buf.writeBytes("\r\n".getBytes(StandardCharsets.UTF_8));
         }
         return buf.toByteArray();
+    }
+
+    private static void writeBulk(OutputStream out, String s){
+        byte[] b = s.getBytes(StandardCharsets.UTF_8);
+        out.write(("$" + b.length + "\r\n").getBytes(StandardCharsets.UTF_8));
+        out.write(b);
+        out.write("\r\n".getBytes(StandardCharsets.UTF_8));
     }
 
     private static void propagate(List<String> command){
