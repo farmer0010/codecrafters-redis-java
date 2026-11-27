@@ -266,6 +266,7 @@ public class Main {
                     writeBulk(out, "subscribe");
                     writeBulk(out, channel);
                     out.write((":" + subscribed.size() + "\r\n").getBytes(StandardCharsets.UTF_8));
+                    continue;
                 }
 
                 if(inMulti){
@@ -990,7 +991,7 @@ public class Main {
         return buf.toByteArray();
     }
 
-    private static void writeBulk(OutputStream out, String s){
+    private static void writeBulk(OutputStream out, String s) throws IOException {
         byte[] b = s.getBytes(StandardCharsets.UTF_8);
         out.write(("$" + b.length + "\r\n").getBytes(StandardCharsets.UTF_8));
         out.write(b);
